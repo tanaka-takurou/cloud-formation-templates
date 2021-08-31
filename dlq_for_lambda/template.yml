@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless DLQ Lambda
+
+Parameters:
+  ApplicationName:
+    Type: String
+    Default: 'ServerlessDLQLambda'
+  DLQSNSMailAddress:
+    Type: String
+    Default: 'your.email@sample.com'
+  DLQSNSTopicName:
+    Type: String
+    Default: 'ServerlessDLQSNSTopic'
+  MainFunctionName:
+    Type: String
+    Default: 'ServerlessDLQLambdaFunction'
+
+Resources:
+  DLQSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Ref DLQSNSTopicName
+      DisplayName: TestDLQSNSTopic
+  DLQSNSSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Ref DLQSNSMailAddress
+      Protocol: email
+      TopicArn: !Ref DLQSNSTopic
+  MainFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref MainFunctionName
+      CodeUri: bin/
+      Handler: main
+      MemorySize: 256
+      Runtime: go1.x
+      Description: 'Sample DLQ Function'
+      DeadLetterQueue:
+        Type: SNS
+        TargetArn: !Ref DLQSNSTopic
+      Policies:
+      - SNSPublishMessagePolicy:
+          TopicName: !Ref DLQSNSTopicName
+      Environment:
+        Variables:
+          REGION: !Ref 'AWS::Region'
+
+Outputs:
+  FunctionName:
+    Description: "FunctionName"
+    Value: !Ref MainFunctionName
